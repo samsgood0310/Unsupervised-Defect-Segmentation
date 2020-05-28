@@ -10,13 +10,15 @@ import numpy as np
 
 
 def mirror(image):
-    image_m = image[:, ::-1]
+    image_m = image.copy()
+    image_m = image_m[:, ::-1]
 
     return image_m
 
 
 def flip(image):
-    image_f = image[::-1, :]
+    image_f = image.copy()
+    image_f = image_f[::-1, :]
 
     return image_f
 
@@ -25,8 +27,9 @@ def rotation(image, range):
     _h, _w = image.shape[0: 2]
     center = (_w // 2, _h // 2)
     rot = random.uniform(range[0], range[1])
+    image_r = image.copy()
     M = cv2.getRotationMatrix2D(center, rot, 1)
-    image_r = cv2.warpAffine(image, M, (_w, _h), borderMode=cv2.BORDER_REPLICATE)
+    image_r = cv2.warpAffine(image_r, M, (_w, _h), borderMode=cv2.BORDER_REPLICATE)
 
     return image_r
 
@@ -55,9 +58,9 @@ def normalize_(image, mean, std):
     image /= std
 
 
-def crop(image, crop_size):
+def crop(image, crop_size, margin):
     height, width, _ = image.shape
-    x_offset = random.randint(0, width - crop_size[0])
-    y_offset = random.randint(0, height - crop_size[1])
+    x_offset = random.randint(margin[0], width - crop_size[0] - margin[0])
+    y_offset = random.randint(margin[0], height - crop_size[1] - margin[1])
 
     return image[y_offset: y_offset+crop_size[1], x_offset: x_offset+crop_size[0]]

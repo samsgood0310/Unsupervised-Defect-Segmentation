@@ -25,17 +25,18 @@ class Preproc(object):
         self.resize = resize
 
     def __call__(self, image):
-        image = cv2.resize(image, self.resize)
+        if self.resize is not None:
+            image = cv2.resize(image, self.resize)
         # random transformation
-        p = random.uniform(0, 1)
-        if (p > 0.33) and (p <= 0.66):
-            image = mirror(image)
-        else:
-            image = flip(image)
-        # light adjustment
-        p = random.uniform(0, 1)
-        if p > 0.5:
-            image = lighting_adjust(image, k=(0.95, 1.05), b=(-10, 10))
+        # p = random.uniform(0, 1)
+        # if (p > 0.33) and (p <= 0.66):
+        #     image = mirror(image)
+        # else:
+        #     image = flip(image)
+        # # light adjustment
+        # p = random.uniform(0, 1)
+        # if p > 0.5:
+        #     image = lighting_adjust(image, k=(0.95, 1.05), b=(-10, 10))
 
         # image normal
         image = image.astype(np.float32) / 255.
@@ -93,8 +94,9 @@ class MVTEC(data.Dataset):
         """Returns training image
         """
         img_path = self.ids[index]
-        img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        img_h, img_w = img.shape[0: 2]
+        img = np.reshape(img, [img_h, img_w, 1])
         if self.preproc is not None:
             img = self.preproc(img)
 
