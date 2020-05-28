@@ -1,6 +1,17 @@
 import cv2
 import os
 import random
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--src_path', help='path of original dataset', type=str, required=True)
+    parser.add_argument('--save_path', help='path to save proprocessed dataset', type=str, required=True)
+    parser.add_argument('--val_ratio', help='ratio of val set', type=float, default=0.05)
+    args = parser.parse_args()
+
+    return args
 
 
 def mirror(image):
@@ -38,10 +49,10 @@ def crop(image, crop_size, margin):
 if __name__ == '__main__':
     TEXTURE = ['carpet', 'grid', 'leather', 'tile', 'wood']
     OBJECT = ['bottle','cable','capsule', 'hazelnut', 'metal_nut', 'pill', 'screw', 'toothbrush', 'transistor', 'zipper']
-
-    src_path = 'D:\DataSet\mvtec_anomaly_detection'
-    save_path = 'D:\DataSet'
-    val_ratio = 0.05
+    args = parse_args()
+    src_path = args.src_path
+    save_path = args.save_path
+    val_ratio = args.val_ratio
 
     new_set_path = os.path.join(save_path, 'mvtec_pre')
     if not os.path.exists(new_set_path):
