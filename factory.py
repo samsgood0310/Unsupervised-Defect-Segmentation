@@ -20,13 +20,11 @@ def load_data_set_from_factory(configs, phase):
         from db import MVTEC, MVTEC_pre
         if phase == 'train':
             set_name = configs['db']['train_split']
-            preproc = MVTEC_pre(resize=tuple(configs['db']['resize']))
         elif phase == 'test':
             set_name = configs['db']['val_split']
-            preproc = None
         else:
             raise Exception("Invalid phase name")
-        set = MVTEC(root=configs['db']['data_dir'], set=set_name, preproc=preproc)
+        set = MVTEC(root=configs['db']['data_dir'], set=set_name, preproc=MVTEC_pre(resize=None))
 
     else:
         raise Exception("Invalid set name")
@@ -35,9 +33,9 @@ def load_data_set_from_factory(configs, phase):
 
 
 def load_training_net_from_factory(configs):
-    if configs['model']['name'] == 'SSIM_Net':
-        from model.networks import SSIM_Net
-        net = SSIM_Net(code_dim=configs['model']['code_dim'], img_channel=configs['model']['img_channel'])
+    if configs['model']['name'] == 'SSIM_AE':
+        from model.networks import AE_basic
+        net = AE_basic(img_channel=configs['model']['img_channel'])
         optimizer = torch.optim.Adam(net.parameters(), lr=configs['op']['learning_rate'], betas=(0.5, 0.999))
 
         return net, optimizer

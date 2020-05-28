@@ -1,2 +1,2 @@
 # Encoder
-from .ssim import SSIM_Net as SSIM_Net
+from .AE_basic import AE_basic
