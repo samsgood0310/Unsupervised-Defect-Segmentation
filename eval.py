@@ -4,7 +4,7 @@ import json
 import torch
 import argparse
 import numpy as np
-from db import Transform, MVTEC
+from db import Test_Transform, MVTEC
 from factory import load_test_model_from_factory
 from tools import *
 
@@ -47,10 +47,10 @@ if __name__ == '__main__':
 
     # load data set
     test_set = MVTEC(root=configs['db']['data_dir'], set=configs['db']['test_split'], preproc=None)
+    transform = Test_Transform()
     print('Data set: {} has been loaded'.format(configs['db']['name']))
 
     # load model
-    transform = Transform(tuple(configs['db']['resize']))
     net = load_test_model_from_factory(configs)
     load_params(net, args.model_path)
     net = net.eval().cuda(args.gpu_id)
@@ -69,24 +69,40 @@ if __name__ == '__main__':
 
             _time = list()
             img_list = item_dict[type]
-            for path in img_list:
-                image = cv2.imread(path, cv2.IMREAD_COLOR)
+            for img_info in img_list:
+                path = img_info[0]
+                IsTexture = img_info[1]
+                image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                img_id = path.split('.')[0][-3:]
+
                 _t.tic()
-                ori_img, input_tensor = transform(image)
+                ori_img, input_tensor = transform(image, IsTexture)
                 with torch.no_grad():
                     input_tensor = input_tensor.cuda(args.gpu_id)
                     re_img = net(input_tensor)
-
-                # project to BGR image
-                re_img = re_img * 255
-                re_img = re_img.cpu().numpy()[0]
-                re_img = re_img.astype(np.uint8)
-                re_img = re_img.transpose((1, 2, 0))
                 inference_time = _t.toc()
                 _time.append(inference_time)
-                img_id = path.split('.')[0][-3:]
-                cv2.imwrite(os.path.join(args.res_dir, item, type, 'ori_{}.png'.format(img_id)), ori_img)
-                cv2.imwrite(os.path.join(args.res_dir, item, type, 're_{}.png'.format(img_id)), re_img)
+
+                # fetech from GPU
+                re_img = torch.squeeze(re_img)
+                re_img = re_img.cpu().numpy()
+                # re_img = re_img.transpose((1, 2, 0))
+
+                # projected to Grayscale image
+                re_img = re_img * 255
+                re_img = re_img.astype(np.uint8)
+
+                # save rebuilt image
+                if IsTexture is True:
+                    con_img = np.zeros([256, 256], dtype=np.uint8)
+                    con_img[0:128, 0:128] = re_img[0]
+                    con_img[128:256, 0:128] = re_img[1]
+                    con_img[0:128, 128:256] = re_img[2]
+                    con_img[128:256, 128:256] = re_img[3]
+                    cv2.imwrite(os.path.join(args.res_dir, item, type, 're_{}.png'.format(img_id)), con_img)
+                else:
+                    cv2.imwrite(os.path.join(args.res_dir, item, type, 're_{}.png'.format(img_id)), re_img)
+
             cost_time += _time
             mean_time = np.array(_time).mean()
             print('Evaluate: Item:{}; Type:{}; Mean time:{:.1f}ms'.format(item, type, mean_time * 1000))
