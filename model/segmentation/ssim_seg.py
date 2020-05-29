@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 
-def ssim_seg(ori_img, re_img, win_size=11, gaussian_weights=False):
+def ssim_seg(ori_img, re_img, win_size=11, threshold=0.1, gaussian_weights=False):
     """
     input:
     threhold:
@@ -16,16 +16,13 @@ def ssim_seg(ori_img, re_img, win_size=11, gaussian_weights=False):
         re_img = cv2.cvtColor(re_img, cv2.COLOR_BGR2GRAY)
 
     # compute ssim , s: The value of ssim, d: the similar map
-    (s, s_map) = compare_ssim(ori_img, re_img,  win_size=win_size, full=True, gaussian_weights=gaussian_weights)
-    s_map = np.clip(s_map, 0, 1)
+    mssim, ssim_map = compare_ssim(ori_img, re_img,  win_size=win_size, full=True, gaussian_weights=gaussian_weights)
+    residual_map = 1.0 - np.clip(ssim_map, 0, 1)
 
-    return s_map
+    # get mask
+    mask = np.zeros(residual_map.shape, dtype=np.uint8)
+    mask[residual_map < threshold] = 0
+    mask[residual_map >= threshold] = 255
 
-
-def seg_mask(s_map, threshold=64):
-    s_map = (s_map * 255).astype("uint8")
-    mask = s_map.copy()
-    mask[s_map < threshold] = 255
-    mask[s_map >= threshold] = 0
     return mask
 

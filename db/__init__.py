@@ -44,5 +44,5 @@ class Test_Transform(object):
             img_tensor = img_tensor.unsqueeze(0)
             img_tensor = img_tensor.unsqueeze(1)
 
-        return image, img_tensor
+        return img_tensor
 
