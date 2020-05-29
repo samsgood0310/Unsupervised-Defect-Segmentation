@@ -49,6 +49,7 @@ if __name__ == '__main__':
     net = load_test_model_from_factory(configs)
     load_params(net, args.model_path)
     net = net.eval().cuda(args.gpu_id)
+    ssim_seg = ssim_seg(window_size=configs['op']['window_size'], channel=configs['model']['img_channel'])
     print('Model: {} has been loaded'.format(configs['model']['name']))
 
     # start validation
@@ -65,14 +66,6 @@ if __name__ == '__main__':
                 input_tensor = input_tensor.cuda(args.gpu_id)
                 re_img = net(input_tensor)
 
-            # fetech from GPU
-            re_img = torch.squeeze(re_img)
-            re_img = re_img.cpu().numpy()
-
-            # projected to Grayscale image
-            re_img = re_img * 255
-            re_img = re_img.astype(np.uint8)
-
             # segmentation
             if IsTexture is True:
                 ori_img = list()
@@ -81,7 +74,14 @@ if __name__ == '__main__':
                 ori_img[2] = image[0:128, 128:256]
                 ori_img[3] = image[128:256, 128:256]
             else:
-                s_mask = ssim_seg(image, re_img, win_size=11, threshold=0.5, gaussian_weights=True)
+                s_mask = ssim_seg(input_tensor, re_img, threshold=0.6)
+                s_mask = s_mask.cpu().numpy()
+
+                # Fetch from GPU and projected to Grayscale image
+                re_img = torch.squeeze(re_img)
+                re_img = re_img.cpu().numpy()
+                re_img = re_img * 255
+                re_img = re_img.astype(np.uint8)
                 cv2.imwrite('./tmp/{}_re_{}.png'.format(item, img_id), re_img)
                 cv2.imwrite('./tmp/{}_ori_{}.png'.format(item, img_id), image)
                 cv2.imwrite('./tmp/{}_mask_{}.png'.format(item, img_id), s_mask)

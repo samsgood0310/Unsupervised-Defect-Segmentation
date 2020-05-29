@@ -1,28 +1,64 @@
-from skimage.measure import compare_ssim
-import cv2
-import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from math import exp
 
 
-def ssim_seg(ori_img, re_img, win_size=11, threshold=0.1, gaussian_weights=False):
+def create_window(window_size, sigma, channel):
+    """Generate gauss window
     """
-    input:
-    threhold:
-    return: s_map: mask
-    """
-    # convert the images to grayscale
-    if len(ori_img.shape) == 3:
-        ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2GRAY)
-    if len(re_img.shape) == 3:
-        re_img = cv2.cvtColor(re_img, cv2.COLOR_BGR2GRAY)
+    center = int(window_size / 2)
+    _1D_gauss = torch.Tensor([exp((-(x - center) ** 2) / float(2 * (sigma ** 2))) for x in range(window_size)])
+    _1D_gauss = _1D_gauss / _1D_gauss.sum()
+    _1D_gauss= _1D_gauss.unsqueeze(1)
+    # matrix multiply
+    _2D_gauss = _1D_gauss.mm(_1D_gauss.t()).float().unsqueeze(0).unsqueeze(0)
+    # kernel shape[out_channel, inchannel/groups, kernel_H, kernel_W]
+    window = _2D_gauss.expand(channel, 1, window_size, window_size).contiguous()
 
-    # compute ssim , s: The value of ssim, d: the similar map
-    mssim, ssim_map = compare_ssim(ori_img, re_img,  win_size=win_size, full=True, gaussian_weights=gaussian_weights)
-    residual_map = 1.0 - np.clip(ssim_map, 0, 1)
+    return window
 
-    # get mask
-    mask = np.zeros(residual_map.shape, dtype=np.uint8)
-    mask[residual_map < threshold] = 0
-    mask[residual_map >= threshold] = 255
 
-    return mask
+def _ssim(img1, img2, window, window_size, channel, size_average=True):
+    # hyper-parameters
+    C1 = 0.01**2
+    C2 = 0.03**2
+    padding = int(window_size / 2)
+
+    # SSIM Map
+    mean1 = F.conv2d(img1, window, padding=padding, groups=channel)
+    mean2 = F.conv2d(img2, window, padding=padding, groups=channel)
+    mean1_sq = mean1.pow(2)
+    mean2_sq = mean2.pow(2)
+    mean1_2 = mean1*mean2
+
+    sigma1_sq = F.conv2d(img1*img1, window, padding=padding, groups=channel) - mean1_sq
+    sigma2_sq = F.conv2d(img2*img2, window, padding=padding, groups=channel) - mean2_sq
+    sigma1_2 = F.conv2d(img1*img2, window, padding=padding, groups=channel) - mean1_2
+
+    ssim_map = ((2*mean1_2 + C1)*(2*sigma1_2 + C2))/((mean1_sq + mean2_sq + C1)*(sigma1_sq + sigma2_sq + C2))
+
+    if size_average:
+        return ssim_map.mean()
+    else:
+        return ssim_map
+
+
+class ssim_seg():
+    def __init__(self, window_size, channel, is_cuda=True):
+        super(ssim_seg, self).__init__()
+        self.window_size = window_size[0]
+        self.channel = channel
+        self.window = create_window(window_size=self.window_size, sigma=1.5, channel=self.channel)
+        if is_cuda is True:
+            self.window = self.window.cuda()
+
+    def __call__(self, img1, img2, threshold):
+        ssim_map = _ssim(img1, img2, self.window, self.window_size, self.channel, False)
+        ssim_map = torch.squeeze(ssim_map)
+        residual_map = 1.0 - ssim_map
+        residual_map[residual_map < threshold] = 0
+        residual_map[residual_map >= threshold] = 255
+
+        return residual_map
 
