@@ -22,21 +22,27 @@ def training_collate(batch):
     return torch.stack(batch, 0)
 
 
-class Transform(object):
-    def __init__(self, resize):
-        self.resize = resize
+class Test_Transform(object):
+    def __init__(self):
+        pass
 
-    def __call__(self, image):
-        image = cv2.resize(image, self.resize)
-        ori_img = image.copy()
+    def __call__(self, image, IsTexture):
+        _h, _w = image.shape[0: 2]
         image = image.astype(np.float32) / 255.
-        if len(image.shape) == 3:
-            image = image.transpose((2, 0, 1))
-            image = torch.from_numpy(image)
+        if IsTexture is True:
+            crop_h = int(_h / 2)
+            crop_w = int(_w / 2)
+            crop_list = []
+            crop_list.append(torch.from_numpy(image[0:crop_h, 0: crop_w]))
+            crop_list.append(torch.from_numpy(image[crop_h:_h, 0: crop_w]))
+            crop_list.append(torch.from_numpy(image[0:crop_h, crop_w: _w]))
+            crop_list.append(torch.from_numpy(image[crop_h:_h, crop_w: _w]))
+            img_tensor = torch.stack(crop_list, 0)
+            img_tensor = img_tensor.unsqueeze(1)
         else:
-            image = torch.from_numpy(image)
-            image = image.unsqueeze(0)
+            img_tensor = torch.from_numpy(image)
+            img_tensor = img_tensor.unsqueeze(0)
+            img_tensor = img_tensor.unsqueeze(1)
 
-
-        return ori_img, image.unsqueeze(0)
+        return img_tensor
 

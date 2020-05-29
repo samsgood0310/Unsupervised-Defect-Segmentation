@@ -69,9 +69,9 @@ def load_training_model_from_factory(configs, ngpu):
 
 
 def load_test_model_from_factory(configs):
-    if configs['model']['name'] == 'SSIM_Net':
-        from model.networks import SSIM_Net
-        net = SSIM_Net(code_dim=configs['model']['code_dim'], img_channel=configs['model']['img_channel'])
+    if configs['model']['name'] == 'SSIM_AE':
+        from model.networks import AE_basic
+        net = AE_basic(img_channel=configs['model']['img_channel'])
 
     else:
         raise Exception("Invalid model name")

@@ -110,6 +110,8 @@ if __name__ == '__main__':
                      mask = cv2.resize(mask, (128, 128))
                 cv2.imwrite(os.path.join(save_test_ano_dir, img_name), img)
                 if ano != 'good':
+                    mask[mask < 128] = 0
+                    mask[mask >= 128] = 255
                     cv2.imwrite(os.path.join(save_gt_ano_dir, '{}_mask.png'.format(img_id)), mask)
 
         # arrange train & val set

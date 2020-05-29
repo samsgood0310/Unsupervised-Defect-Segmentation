@@ -13,6 +13,8 @@ from collections import OrderedDict
 from .augment import *
 from .eval_func import *
 
+TEXTURE = ['carpet', 'grid', 'leather', 'tile', 'wood']
+OBJECT = ['bottle', 'cable', 'capsule', 'hazelnut', 'metal_nut', 'pill', 'screw', 'toothbrush', 'transistor', 'zipper']
 
 class Preproc(object):
     """Pre-procession of input image includes resize, crop & data augmentation
@@ -73,6 +75,9 @@ class MVTEC(data.Dataset):
             self.test_len = 0
             self.test_dict = OrderedDict()
             for _item in os.listdir(root):
+                IsTexture = False
+                if _item in TEXTURE:
+                    IsTexture = True
                 item_path = os.path.join(root, _item)
                 if os.path.isfile(item_path):
                     continue
@@ -84,9 +89,26 @@ class MVTEC(data.Dataset):
                     for img in os.listdir(img_dir):
                         if re.search('.png', img) is None:
                             continue
-                        ids.append(os.path.join(img_dir, img))
+                        ids.append([os.path.join(img_dir, img), IsTexture])
                         self.test_len += 1
                     self.test_dict[_item][type] = ids
+        elif set == 'val':
+            self.val_dict = OrderedDict()
+            for _item in os.listdir(root):
+                IsTexture = False
+                if _item in TEXTURE:
+                    IsTexture = True
+                item_path = os.path.join(root, _item)
+                if os.path.isfile(item_path):
+                    continue
+                val_dir = os.path.join(item_path, set)
+                ids = list()
+                for img in os.listdir(val_dir):
+                    if re.search('.png', img) is None:
+                        continue
+                    ids.append([os.path.join(val_dir, img), IsTexture])
+                self.val_dict[_item] = ids
+
         else:
             raise Exception("Invalid set name")
 
